@@ -162,20 +162,17 @@ class SupersetResultSet:
                     # workaround for bug converting
                     # `psycopg2.tz.FixedOffsetTimezone` tzinfo values.
                     # related: https://issues.apache.org/jira/browse/ARROW-5248
-                    sample = self.first_nonempty(array[column])
-                    if sample and isinstance(sample, datetime.datetime):
+                    if isinstance(sample, datetime.datetime):
                         try:
-                            if sample.tzinfo:
-                                tz = sample.tzinfo
-                                series = pd.Series(array[column])
-                                series = pd.to_datetime(series)
-                                pa_data[i] = pa.Array.from_pandas(
-                                    series,
-                                    type=pa.timestamp("ns", tz=tz),
-                                )
+                            from dateutil import tz
+                            series = pd.Series(array[column])
+                            series = pd.to_datetime(series, utc=True)
+                            pa_data[i] = pa.Array.from_pandas(
+                                series,
+                                type=pa.timestamp("ns", tz=tz.gettz('Europe/Paris')),
+                            )
                         except Exception as ex:  # pylint: disable=broad-except
                             logger.exception(ex)
-
         if not pa_data:
             column_names = []
 
